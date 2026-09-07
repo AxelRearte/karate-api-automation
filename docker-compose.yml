@@ -1,0 +1,59 @@
+services:
+
+  # ── PostgreSQL ────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: karate-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       karatedb
+      POSTGRES_USER:     karate
+      POSTGRES_PASSWORD: karate123
+    ports:
+      - "5432:5432"
+    volumes:
+      # Scripts SQL que se ejecutan en orden al crear el contenedor
+      - ./docker/init:/docker-entrypoint-initdb.d
+      # Persistencia de datos entre reinicios
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U karate -d karatedb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── PostgREST — API REST automática desde PostgreSQL ─────────
+  # Expone cada tabla de PostgreSQL como un endpoint REST.
+  # Sin escribir una línea de código de backend.
+  postgrest:
+    image: postgrest/postgrest:v12.2.0
+    container_name: karate-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PGRST_DB_URI:             postgres://karate:karate123@postgres:5432/karatedb
+      PGRST_DB_SCHEMA:          api
+      PGRST_DB_ANON_ROLE:       karate_anon
+      PGRST_OPENAPI_SERVER_PROXY_URI: http://localhost:3000
+      PGRST_JWT_SECRET:         "super-secret-jwt-token-karate-practice-32chars"
+      PGRST_DB_MAX_ROWS:        100
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── pgAdmin — UI para inspeccionar la base de datos ──────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: karate-pgadmin
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL:    admin@karate.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:

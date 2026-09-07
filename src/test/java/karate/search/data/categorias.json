@@ -1,0 +1,7 @@
+[
+  { "categoria": "smartphones", "precioMinimo": 100 },
+  { "categoria": "laptops",     "precioMinimo": 500 },
+  { "categoria": "fragrances",  "precioMinimo": 10  },
+  { "categoria": "groceries",   "precioMinimo": 1   },
+  { "categoria": "furniture",   "precioMinimo": 50  }
+]

@@ -1,8 +1,10 @@
-@local @smoke
+@local @smoke @lock=customers
 Feature: Gestión de Clientes (Customers API)
 
   Background:
     * url localApiUrl
+    * def DbUtils = Java.type('util.DbUtils')
+    * def db      = new DbUtils(dbConfig)
 
   Scenario: Obtener todos los clientes y validar su estructura
     # 1. Definir el endpoint (http://localhost:3000/customers)
@@ -51,3 +53,38 @@ Feature: Gestión de Clientes (Customers API)
       """
 
     * print '✅ Cliente obtenido con ID 1:', response[0].first_name, response[0].last_name
+
+
+  Scenario: Crear un nuevo cliente via POST y verificar en DB
+    # Datos de prueba para el alta
+    * def nuevoCliente =
+      """
+      {
+        "first_name": "Axel",
+        "last_name":  "QA",
+        "email":      "axel.qa@example.com",
+        "phone":      "+54-11-9999"
+      }
+      """
+
+    # 1. Enviar el POST a la API
+    Given path '/customers'
+    And header Prefer = 'return=representation'
+    And request nuevoCliente
+    When method POST
+    Then status 201
+
+    * def creado = response[0]
+    * def nuevoId = creado.id
+    * print '✅ Cliente creado via API con ID:', nuevoId
+
+    # 2. Auditar en la Base de Datos PostgreSQL
+    * def clienteDb = db.queryOne('SELECT * FROM api.customers WHERE id = ' + nuevoId)
+    * assert clienteDb != null
+    And match clienteDb.first_name == nuevoCliente.first_name
+    And match clienteDb.email      == nuevoCliente.email
+    * print '✅ Confirmado en PostgreSQL: cliente guardado con email', clienteDb.email
+
+    # 3. Cleanup: eliminar el registro de prueba para dejar la DB limpia
+    * db.execute('DELETE FROM api.customers WHERE id = ' + nuevoId)
+    * print '🧹 Cleanup: cliente', nuevoId, 'eliminado de la DB'

@@ -30,3 +30,24 @@ Feature: Gestión de Clientes (Customers API)
       """
 
     * print '✅ Total de clientes recibidos:', response.length
+
+
+  Scenario: Obtener un cliente por ID y validar su información
+    # Escenario escrito por Axel
+    Given path '/customers'
+    And param id = 'eq.1'
+    When method GET
+    Then status 200
+    And match response == '#[] #object'
+    And match response[0] contains
+      """
+      {
+        "id":         1,
+        "first_name": "Emily",
+        "last_name":  "#string",
+        "email":      "#string",
+        "active":     "#boolean"
+      }
+      """
+
+    * print '✅ Cliente obtenido con ID 1:', response[0].first_name, response[0].last_name

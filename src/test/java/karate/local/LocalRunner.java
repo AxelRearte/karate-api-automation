@@ -6,7 +6,7 @@ class LocalRunner {
 
     @Karate.Test
     Karate testLocal() {
-        return Karate.run("products-local", "orders").relativeTo(getClass());
+        return Karate.run("products-local", "orders", "customers").relativeTo(getClass());
     }
 
 }

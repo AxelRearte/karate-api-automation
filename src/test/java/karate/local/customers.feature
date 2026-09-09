@@ -75,7 +75,6 @@ Feature: Gestión de Clientes (Customers API)
 
 
   Scenario: Intentar crear un cliente con email existente devuelve 409 Conflict
-    # Caso negativo: validación de unicidad de email
     * def clienteDuplicado =
       """
       {
@@ -90,7 +89,31 @@ Feature: Gestión de Clientes (Customers API)
     And request clienteDuplicado
     When method POST
     Then status 409
-
-    # Validar que el mensaje de error mencione la restricción de clave duplicada
     And match response.message contains 'duplicate key value violates unique constraint'
     * print '🛑 Error esperado recibido correctamente:', response.message
+
+
+  Scenario: Actualizar el telefono de un cliente via PATCH y auditar en DB
+    # Guardar teléfono original para restaurarlo al final
+    * def original = db.queryOne('SELECT phone FROM api.customers WHERE id = 1')
+    * def telefonoOriginal = original.phone
+
+    Given path '/customers'
+    And param id = 'eq.1'
+    And header Prefer = 'return=representation'
+    And request { "phone": "+54-11-8888-9999" }
+    When method PATCH
+    Then status 200
+
+    # 1. Validar respuesta de la API
+    And match response[0].phone == '+54-11-8888-9999'
+    And match response[0].first_name == 'Emily'
+
+    # 2. Auditar directamente en PostgreSQL
+    * def clienteDb = db.queryOne('SELECT * FROM api.customers WHERE id = 1')
+    And match clienteDb.phone == '+54-11-8888-9999'
+    * print '✅ Teléfono auditado en PostgreSQL con éxito:', clienteDb.phone
+
+    # 3. Cleanup: restaurar el teléfono original
+    * db.executeWithParams('UPDATE api.customers SET phone = ? WHERE id = 1', telefonoOriginal)
+    * print '🔄 Teléfono original restaurado a:', telefonoOriginal
